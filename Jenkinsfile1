@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+
+    tools {
+        maven 'Maven3'    // Make sure you have Maven configured in Jenkins global tools
+        jdk 'Java11'      // Or your Java version configured in Jenkins
+    }
+
+    environment {
+        // Name of your SonarQube server configured in Jenkins
+        SONAR = 'MySonarQube'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/your-username/your-repo.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONAR}") {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check the logs!"
+        }
+    }
+}
